@@ -11,22 +11,29 @@ https://github.com/random-forests/tutorials/blob/master/decision_tree.py
 """
 import csv
 import os
-data = [] #acá se guardan los datos leídos sin estar separados. Cambiarlo a matriz?
-# crear una matriz pequeña de nx2 para guardar si el estudiante será o no exitoso e imprimirla luego bonita. :)
 
+"""cambiamos la lectura de datos entonces hay que adaptar varias cosas :)
+"""
 
-#metodo que lee y almacena los datos en data[]
-#Usa append, podría ser más eficiente.
+filas = 50000  #Cambiar según la cantidad de datos
+
+#metodo que lee y almacena los datos en una matriz que retorna
+#Pensar en como excluir la primera fila y meterla como en un arreglo aparte para así tener las categorias.
+
 def lecturaDeDatos (archivo):
     with open(archivo, encoding = 'utf-8') as archivocsv: #encoding es para que reconozca cualquier caracter
-        tie_reader = csv.reader(archivocsv, delimiter=',') #delimiter es el que lo separa por comas
-        for line in tie_reader:
-            data.append(line)
-
+        data = [0]* filas
+        lines = csv.reader(archivocsv, delimiter=',') #delimiter es el que lo separa por comas
+        j = 0
+        for line in lines:
+            data [j] = line
+            j = j+1
+        return data
+        
 
 #metodos auxiliares
+                
 def is_numeric(value):
-    
     return isinstance(value, int) or isinstance(value, float) 
 #isinstance es un booleano que te dice si el valor que le pasas es del tipo que le pasas
 
@@ -34,7 +41,8 @@ def is_numeric(value):
 def class_counts(rows):
     dictionary = {}  # {} crea un diccionario
     for r in rows:
-        a = r[-1]
+        a = r[-1]   
+        """Esto esta lanzando problema porque cambiamos como se almacena la información. """
         if a not in dictionary:  #aqui evita los repetidos.
             dictionary[a] = 0
         dictionary[a] += 1
@@ -168,13 +176,13 @@ def print_tree(node, spacing=""):
 #Esto ya es para correr el código e idealmente imprimirlo
 #Falta hacer que funcione :)
     
+
 archivo = os.path.expanduser('~/Desktop/Datos proyecto/Datos0.csv')  
-   
-lecturaDeDatos(archivo)
-my_tree = build_tree(data)
+d = lecturaDeDatos (archivo)
+print (d)
+
 
 
 archivo2 = os.path.expanduser('~/Desktop/Datos proyecto/Test0.csv')
  
 lecturaDeDatos(archivo2)
-classify(data[0], my_tree)
