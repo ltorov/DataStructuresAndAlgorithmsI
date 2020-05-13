@@ -15,7 +15,7 @@ import os
 """cambiamos la lectura de datos entonces hay que adaptar varias cosas :)
 """
 
-filas = 50000  #Cambiar según la cantidad de datos
+filas = 135000  #Cambiar según la cantidad de datos
 
 #metodo que lee y almacena los datos en una matriz que retorna
 #Pensar en como excluir la primera fila y meterla como en un arreglo aparte para así tener las categorias.
@@ -24,32 +24,46 @@ def lecturaDeDatos (archivo):
     with open(archivo, encoding = 'utf-8') as archivocsv: #encoding es para que reconozca cualquier caracter
         data = [0]* filas
         lines = csv.reader(archivocsv, delimiter=',') #delimiter es el que lo separa por comas
-        j = 0
+        filasusadas = 0
         for line in lines:
-            data [j] = line
-            j = j+1
-        return data
-        
+            data [filasusadas] = line
+            filasusadas = filasusadas+1
+        return data, filasusadas
 
-#metodos auxiliares
+#Este metodo se usara para que no queden un montón de posiciones en 0, y tener una solo matriz
+def createMatrix(archivo):
+    rows, numrows = lecturaDeDatos (archivo)
+    data = [0]*numrows
+    for i in range (numrows):
+        data [i] = rows [i]
+    return data
+    
+"metodos auxiliares"
                 
 def is_numeric(value):
     return isinstance(value, int) or isinstance(value, float) 
 #isinstance es un booleano que te dice si el valor que le pasas es del tipo que le pasas
 
-#Esto lo que hace es crear un diccionario de filas de data[] y no copia repetidos.
+#Esto lo que hace es crear un diccionario del ultimo objeto de las filas .
 def class_counts(rows):
     dictionary = {}  # {} crea un diccionario
-    for r in rows:
-        a = r[-1]   
-        """Esto esta lanzando problema porque cambiamos como se almacena la información. """
-        if a not in dictionary:  #aqui evita los repetidos.
-            dictionary[a] = 0
-        dictionary[a] += 1
+    for row in rows:
+        dato = row[-1]   #row[-1] es el ultimo objeto de cada fila y es de tipo string.
+       
+        if dato not in dictionary:  #aqui crea nuevas llaves
+            dictionary[dato] = 0
+        dictionary[dato] += 1
     return dictionary
 
-
-#metodos de decisión
+#Este metodo obtiene la primera fila, aquella que contiene todas las "categorias" en forma string y las separa y guarda en una lista.
+def getLabels (rows):
+    columns = rows[0] #lista con un sólo elemento
+    a = columns [0] #string de ese elemento
+    labels = a.split(';')
+    return labels
+    
+    
+"metodos de decisión"
     
 #Question es un tipo de objeto que contiene las preguntas (columns) y los tipos de respuesta.
 class Question:
@@ -96,10 +110,11 @@ def decide_partition (rows):
     bestgain = 0 # empieza en cero pero se va cambiando.
     bestquestion = None # none es como null
     current_uncertainty = gini(rows)
-    num_features = len(rows[0]) -1 # number of columns or information types.
+    a = getLabels(rows)
+    num_features = len(a) -1 # number of labels
     
     for i in range (num_features): 
-        values = set([row[i] for row in rows]) #este metodo guarda los valores y les quita los repetidos
+        values = set([row[i] for row in rows]) #set guarda los valores y les quita los repetidos
         
         for j in values: 
             question = Question (i, j)
@@ -113,10 +128,11 @@ def decide_partition (rows):
             if gain > bestgain:
                 bestgain = gain
                 bestquestion = question
-                
+    print(bestgain)
+    print(bestquestion)          
     return bestgain, bestquestion
 
-# ahora, a construir el arbol
+"metodos de construcción del árbol de decisión"
 #Una hoja es cuando ya no se puede dividir más la imformación
 class Leaf:
     def __init__ (self, rows):
@@ -145,17 +161,16 @@ def build_tree(rows):
 
     return Decision_Node(question, true_branch, false_branch)
 
-# ahora, cuando se tiene el arbol de decisión creado, se usa para clasificar nueva data.
+#ahora, cuando se tiene el arbol de decisión creado, se usa para clasificar nueva data.
     
- #este metodo retorna las predicciones de una hoja, es decir si tiene éxito o no.   
+#este metodo retorna las predicciones de una hoja, es decir si tiene éxito o no.   
 def classify(row, node):
     if isinstance(node,Leaf):
         return node.predictions
     if node.question.match(row):
         return classify (row, node.true_branch)
     else:
-        return classify (row, node.false_branch)
-    
+        return classify (row, node.false_branch)  
 
 #este código imprime el arbol.
 def print_tree(node, spacing=""):
@@ -176,13 +191,8 @@ def print_tree(node, spacing=""):
 #Esto ya es para correr el código e idealmente imprimirlo
 #Falta hacer que funcione :)
     
+"aquí se lee el archivo"
 
 archivo = os.path.expanduser('~/Desktop/Datos proyecto/Datos0.csv')  
-d = lecturaDeDatos (archivo)
-print (d)
-
-
-
-archivo2 = os.path.expanduser('~/Desktop/Datos proyecto/Test0.csv')
- 
-lecturaDeDatos(archivo2)
+data = createMatrix(archivo)
+decide_partition(data)
