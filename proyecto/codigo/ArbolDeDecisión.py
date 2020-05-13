@@ -78,17 +78,20 @@ class Question:
             return a >= self.value
         else: 
             return a == self.value
-    
+
+#Hay que adaptarlo a matrices, ya que funciona es con listas  
 #recibe data[] y un objeto de tipo Question para separar data[] en dos, según la pregunta.
 def partition(rows,question):
-    true_rows = []
-    false_rows = []
-    for i in rows:
-        if question.match(i):
-            true_rows.append(i)
+    numrows =15001
+    true_rows = [0]*numrows
+    false_rows = [0]*numrows
+    for i in range (numrows):
+        if question.match(rows[i]):
+            true_rows[i] = rows[i]
         else:
-            false_rows.append(i)
+            false_rows[i] = rows[i]
     return true_rows, false_rows  
+    
  
 #calcula la impureza de gini de cierta data.       
 def gini (rows):
@@ -106,6 +109,7 @@ def information_gain (left, right, current_uncertainty):
     return b
 
 # decide que pregunta es mejor para cada nodo de decision.
+#tiene problemas
 def decide_partition (rows):
     bestgain = 0 # empieza en cero pero se va cambiando.
     bestquestion = None # none es como null
@@ -195,4 +199,3 @@ def print_tree(node, spacing=""):
 
 archivo = os.path.expanduser('~/Desktop/Datos proyecto/Datos0.csv')  
 data = createMatrix(archivo)
-decide_partition(data)
