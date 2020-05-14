@@ -11,11 +11,13 @@ https://github.com/random-forests/tutorials/blob/master/decision_tree.py
 """
 import csv
 import os
+import numpy as np
+#import cProfile
 
 """cambiamos la lectura de datos entonces hay que adaptar varias cosas :)
 """
 
-filas = 135000  #Cambiar según la cantidad de datos
+filas = 135001 #leer este datos del archivo
 
 #metodo que lee y almacena los datos en una matriz que retorna
 #Pensar en como excluir la primera fila y meterla como en un arreglo aparte para así tener las categorias.
@@ -23,7 +25,7 @@ filas = 135000  #Cambiar según la cantidad de datos
 def lecturaDeDatos (archivo):
     with open(archivo, encoding = 'utf-8') as archivocsv: #encoding es para que reconozca cualquier caracter
         data = [0]* filas
-        lines = csv.reader(archivocsv, delimiter=',') #delimiter es el que lo separa por comas
+        lines = csv.reader(archivocsv, delimiter=';') #delimiter es el que lo separa por comas
         filasusadas = 0
         for line in lines:
             data [filasusadas] = line
@@ -40,16 +42,15 @@ def createMatrix(archivo):
     
 "metodos auxiliares"
                 
-def is_numeric(value):
+def isNumeric(value):
     return isinstance(value, int) or isinstance(value, float) 
 #isinstance es un booleano que te dice si el valor que le pasas es del tipo que le pasas
 
-#Esto lo que hace es crear un diccionario del ultimo objeto de las filas .
-def class_counts(rows):
+#Esto lo que hace es crear un diccionario del ultimo objeto de las filas, en nuestro caso el éxito:) .
+def classCounts(rows):
     dictionary = {}  # {} crea un diccionario
     for row in rows:
         dato = row[-1]   #row[-1] es el ultimo objeto de cada fila y es de tipo string.
-       
         if dato not in dictionary:  #aqui crea nuevas llaves
             dictionary[dato] = 0
         dictionary[dato] += 1
@@ -57,15 +58,14 @@ def class_counts(rows):
 
 #Este metodo obtiene la primera fila, aquella que contiene todas las "categorias" en forma string y las separa y guarda en una lista.
 def getLabels (rows):
-    columns = rows[0] #lista con un sólo elemento
-    a = columns [0] #string de ese elemento
-    labels = a.split(';')
-    return labels
+    return rows[0]
     
     
 "metodos de decisión"
     
 #Question es un tipo de objeto que contiene las preguntas (columns) y los tipos de respuesta.
+#Como hacer para que no importen las mayusculas y caracteres especiales
+
 class Question:
     
     def __init__ (self, column, value):
@@ -74,28 +74,44 @@ class Question:
         
     def match (self, data):
         a = data[self.column]
-        if is_numeric(a):
+        if isNumeric(a) :
             return a >= self.value
+        elif np.char.isdigit(a):
+            b = int(a)
+            return b == self.value #Para booleanos con 0 y 1.
         else: 
-            return a == self.value
+            return a == self.value # Esto hace que ignore las mayusculas.
 
-#Hay que adaptarlo a matrices, ya que funciona es con listas  
+
 #recibe data[] y un objeto de tipo Question para separar data[] en dos, según la pregunta.
+#funciona :)
 def partition(rows,question):
-    numrows =15001
-    true_rows = [0]*numrows
-    false_rows = [0]*numrows
-    for i in range (numrows):
+    numtruerows = 0
+    numfalserows = 0
+    
+    for row in rows:
+        if question.match(row):
+            numtruerows = numtruerows +1
+        else:
+            numfalserows = numfalserows +1
+            
+    true_rows = [0] * numtruerows
+    false_rows = [0] * numfalserows
+    
+    for i in range (numtruerows):
         if question.match(rows[i]):
             true_rows[i] = rows[i]
-        else:
+    
+    for i in range(numfalserows):
+        if  question.match(rows[i]) != True:
             false_rows[i] = rows[i]
+            
     return true_rows, false_rows  
     
  
 #calcula la impureza de gini de cierta data.       
 def gini (rows):
-    counts = class_counts(rows)
+    counts = classCounts(rows)
     impurity = 1
     for i in counts: 
         prob = counts[i]/ float(len(rows))
@@ -103,31 +119,34 @@ def gini (rows):
     return impurity
 
 #calcula que tanto separa una pregunta.
-def information_gain (left, right, current_uncertainty):
+def informationGain (left, right, current_uncertainty):
     a = float(len(left))/(len(left)+len(right))
     b = current_uncertainty - a * gini(left) - (1 - a) * gini(right)
     return b
 
 # decide que pregunta es mejor para cada nodo de decision.
-#tiene problemas
-def decide_partition (rows):
+#no funciona, saca un problema en classcounts pero classcounts funciona por  su cuenta
+    
+#primero hay que revisar cuantos cumplen la condición por complejidad en vez de set
+def decidePartition (rows):
     bestgain = 0 # empieza en cero pero se va cambiando.
     bestquestion = None # none es como null
-    current_uncertainty = gini(rows)
+    currentUncertainty = gini(rows)
     a = getLabels(rows)
-    num_features = len(a) -1 # number of labels
+    numFeatures = len(a) -1 # number of labels
     
-    for i in range (num_features): 
+    for i in range (numFeatures): 
+        
         values = set([row[i] for row in rows]) #set guarda los valores y les quita los repetidos
         
         for j in values: 
-            question = Question (i, j)
+            question = Question (i, j) #Esto genera todas las preguntas posibles
             true_rows, false_rows = partition(rows, question)
             
             if len(true_rows) == 0 or len(false_rows) == 0: 
                 continue #si esta partición no hace nada, o no divide los datos, ir a la siguiente partición
                 
-            gain = information_gain(true_rows, false_rows, current_uncertainty)
+            gain = informationGain(true_rows, false_rows, currentUncertainty)
             
             if gain > bestgain:
                 bestgain = gain
@@ -140,30 +159,30 @@ def decide_partition (rows):
 #Una hoja es cuando ya no se puede dividir más la imformación
 class Leaf:
     def __init__ (self, rows):
-        self.predictions = class_counts(rows)
+        self.predictions = classCounts(rows)
         # self.pureza = indice     Esto hay que pensarlo para que cada hoja tenga su certeza. Pasarlo como parametro.
 
 #Un nodo de decision es aquel que divide la información en dos.      
-class Decision_Node:
+class DecisionNode:
     def __init__ (self, question, true_branch, false_branch):
         self.question = question
         self.true_branch = true_branch
         self.false_branch = false_branch
     
 #un metodo recursivo para construir el arbol que tiene como parada cuando se llega a una hoja.
-def build_tree(rows):
-    gain, question = decide_partition(rows)
+def buildTree(rows):
+    gain, question = decidePartition(rows)
     
     if gain == 0:
         return Leaf(rows)
     
     true_rows, false_rows = partition(rows, question)
     
-    true_branch = build_tree(true_rows)
+    true_branch = buildTree(true_rows)
     
-    false_branch = build_tree(false_rows)
+    false_branch = buildTree(false_rows)
 
-    return Decision_Node(question, true_branch, false_branch)
+    return DecisionNode(question, true_branch, false_branch)
 
 #ahora, cuando se tiene el arbol de decisión creado, se usa para clasificar nueva data.
     
@@ -177,7 +196,7 @@ def classify(row, node):
         return classify (row, node.false_branch)  
 
 #este código imprime el arbol.
-def print_tree(node, spacing=""):
+def printTree(node, spacing=""):
 
     if isinstance(node, Leaf):
         print (spacing + "Predict", node.predictions)
@@ -186,10 +205,10 @@ def print_tree(node, spacing=""):
     print (spacing + str(node.question))
 
     print (spacing + '--> True:')
-    print_tree(node.true_branch, spacing + "  ")
+    printTree(node.true_branch, spacing + "  ")
 
     print (spacing + '--> False:')
-    print_tree(node.false_branch, spacing + "  ")
+    printTree(node.false_branch, spacing + "  ")
     
 
 #Esto ya es para correr el código e idealmente imprimirlo
@@ -197,5 +216,9 @@ def print_tree(node, spacing=""):
     
 "aquí se lee el archivo"
 
-archivo = os.path.expanduser('~/Desktop/Datos proyecto/Datos0.csv')  
+archivo = os.path.expanduser('~/Desktop/Datos proyecto/lite.csv')  
 data = createMatrix(archivo)
+#cProfile.run()
+question = Question(1,"no")
+true,false = partition(data,question)
+print(gini(true))
