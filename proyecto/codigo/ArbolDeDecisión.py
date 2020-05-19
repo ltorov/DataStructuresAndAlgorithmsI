@@ -14,40 +14,36 @@ import os
 import numpy as np
 #import cProfile
 
-"""cambiamos la lectura de datos entonces hay que adaptar varias cosas :)
-"""
-
 filas = 135001 #leer este datos del archivo
 
-#metodo que lee y almacena los datos en una matriz que retorna
 #Pensar en como excluir la primera fila y meterla como en un arreglo aparte para así tener las categorias.
 
 def lecturaDeDatos (archivo):
+    """Reads and stores the given dataset into a matrix
+    """
     with open(archivo, encoding = 'utf-8') as archivocsv: #encoding es para que reconozca cualquier caracter
         data = [0]* filas
         lines = csv.reader(archivocsv, delimiter=';') #delimiter es el que lo separa por comas
         filasusadas = 0
         for line in lines:
-            data [filasusadas] = line
+            data[filasusadas] = line
             filasusadas = filasusadas+1
-        return data, filasusadas
-
-#Este metodo se usara para que no queden un montón de posiciones en 0, y tener una solo matriz
-def createMatrix(archivo):
-    rows, numrows = lecturaDeDatos (archivo)
-    data = [0]*numrows
-    for i in range (numrows):
-        data [i] = rows [i]
-    return data
+        datos = [0]*filasusadas
+        for i in range (filasusadas):
+            datos[i] = data[i]
+        return datos, filasusadas
     
-"metodos auxiliares"
+"METODOS AUXILIARES"
                 
 def isNumeric(value):
+    """ Determines wether a given value is numeric
+    """
     return isinstance(value, int) or isinstance(value, float) 
-#isinstance es un booleano que te dice si el valor que le pasas es del tipo que le pasas
-
-#Esto lo que hace es crear un diccionario del ultimo objeto de las filas, en nuestro caso el éxito:) .
+    #isinstance es un booleano que te dice si el valor que le pasas es del tipo que le pasas
+    
 def classCounts(rows):
+    """ Counts how many success cases there are and stores it into a dictionary
+    """
     dictionary = {}  # {} crea un diccionario
     for row in rows:
         dato = row[-1]   #row[-1] es el ultimo objeto de cada fila y es de tipo string.
@@ -56,18 +52,16 @@ def classCounts(rows):
         dictionary[dato] += 1
     return dictionary
 
-#Este metodo obtiene la primera fila, aquella que contiene todas las "categorias" en forma string y las separa y guarda en una lista.
 def getLabels (rows):
-    return rows[0]
+    """Accesses the first row of the matrix which corresponds to the labels.
+    """
+    return rows[0] 
     
+"METODOS DE DECISIÓN"
     
-"metodos de decisión"
-    
-#Question es un tipo de objeto que contiene las preguntas (columns) y los tipos de respuesta.
-#Como hacer para que no importen las mayusculas y caracteres especiales
-
 class Question:
-    
+    """ An object type which contains the questions or labels and the given answers without repetition. Ignores caps.
+    """
     def __init__ (self, column, value):
         self.column = column
         self.value = value
@@ -80,37 +74,44 @@ class Question:
             b = int(a)
             return b == self.value #Para booleanos con 0 y 1.
         else: 
-            return a == self.value # Esto hace que ignore las mayusculas.
+            return a.upper == self.value.upper # Esto hace que ignore las mayusculas.  
+        
+#Este metodo es importante para imprimir el arbol, hay que buscar que genere el string necesario  
+#"Welcome" -> "To"        
+    def toString (self):
+        parameter = str(self.column)
+        values = str(self.value)
+        comparison = " == "
+        if isNumeric(a) :
+            comparison = " >= "
+        else:
+            comparison = " == "
+        return parameter, comparison, values
 
-
-#recibe data[] y un objeto de tipo Question para separar data[] en dos, según la pregunta.
-#funciona :)
 def partition(rows,question):
+    """Splits the matrix according to a given question, into a true matrix and a false matrix.
+    """
     numtruerows = 0
-    numfalserows = 0
-    
     for row in rows:
         if question.match(row):
             numtruerows = numtruerows +1
-        else:
-            numfalserows = numfalserows +1
-            
+    numfalserows = len(rows) - numtruerows       
     true_rows = [0] * numtruerows
     false_rows = [0] * numfalserows
-    
-    for i in range (numtruerows):
-        if question.match(rows[i]):
-            true_rows[i] = rows[i]
-    
-    for i in range(numfalserows):
-        if  question.match(rows[i]) != True:
-            false_rows[i] = rows[i]
-            
+    j = 0
+    k = 0
+    for row in rows:
+        if question.match(row):
+            true_rows[j] = row
+            j = j+1
+        else:
+            false_rows[k] = row
+            k=k+1
     return true_rows, false_rows  
-    
- 
-#calcula la impureza de gini de cierta data.       
+       
 def gini (rows):
+    """Calculates the gini impurity of a given dataset.
+    """
     counts = classCounts(rows)
     impurity = 1
     for i in counts: 
@@ -118,76 +119,71 @@ def gini (rows):
         impurity -= prob**2 # ** is for exponents.
     return impurity
 
-#calcula que tanto separa una pregunta.
 def informationGain (left, right, current_uncertainty):
+    """Calculates the information gain of a given question.
+    """
     a = float(len(left))/(len(left)+len(right))
     b = current_uncertainty - a * gini(left) - (1 - a) * gini(right)
     return b
 
-# decide que pregunta es mejor para cada nodo de decision.
-#no funciona, saca un problema en classcounts pero classcounts funciona por  su cuenta
-    
-#primero hay que revisar cuantos cumplen la condición por complejidad en vez de set
+
 def decidePartition (rows):
+    """Tests all the possible partition by all the possible questions and decides which has more information gain.
+    """
     bestgain = 0 # empieza en cero pero se va cambiando.
     bestquestion = None # none es como null
     currentUncertainty = gini(rows)
     a = getLabels(rows)
     numFeatures = len(a) -1 # number of labels
-    
     for i in range (numFeatures): 
-        
         values = set([row[i] for row in rows]) #set guarda los valores y les quita los repetidos
-        
         for j in values: 
             question = Question (i, j) #Esto genera todas las preguntas posibles
             true_rows, false_rows = partition(rows, question)
-            
             if len(true_rows) == 0 or len(false_rows) == 0: 
                 continue #si esta partición no hace nada, o no divide los datos, ir a la siguiente partición
-                
             gain = informationGain(true_rows, false_rows, currentUncertainty)
-            
             if gain > bestgain:
                 bestgain = gain
-                bestquestion = question
-    print(bestgain)
-    print(bestquestion)          
+                bestquestion = question      
     return bestgain, bestquestion
 
-"metodos de construcción del árbol de decisión"
-#Una hoja es cuando ya no se puede dividir más la imformación
+"METODOS DE CONSTRUCCIÓN DEL ARBOL"
 class Leaf:
+    """An object type for a dataset that cannot be split further. In graph theory, a leaf.
+    """
     def __init__ (self, rows):
         self.predictions = classCounts(rows)
         # self.pureza = indice     Esto hay que pensarlo para que cada hoja tenga su certeza. Pasarlo como parametro.
-
-#Un nodo de decision es aquel que divide la información en dos.      
+ 
 class DecisionNode:
+    """An object type which splits the dataset. In graph theory, a node.
+    """
     def __init__ (self, question, true_branch, false_branch):
         self.question = question
         self.true_branch = true_branch
         self.false_branch = false_branch
-    
-#un metodo recursivo para construir el arbol que tiene como parada cuando se llega a una hoja.
+        
+    def __str__(self):
+        question = self.question
+        parameter, comparison, values = question.toString()
+        return parameter + comparison + values
+        
 def buildTree(rows):
+    """Uses recursion to split the data until it can no longer be separated.
+       Builds the decision tree.
+    """
     gain, question = decidePartition(rows)
-    
     if gain == 0:
         return Leaf(rows)
-    
     true_rows, false_rows = partition(rows, question)
-    
     true_branch = buildTree(true_rows)
-    
     false_branch = buildTree(false_rows)
-
     return DecisionNode(question, true_branch, false_branch)
-
-#ahora, cuando se tiene el arbol de decisión creado, se usa para clasificar nueva data.
-    
-#este metodo retorna las predicciones de una hoja, es decir si tiene éxito o no.   
+   
 def classify(row, node):
+    """Uses the decision tree to test new data.
+    """
     if isinstance(node,Leaf):
         return node.predictions
     if node.question.match(row):
@@ -195,30 +191,13 @@ def classify(row, node):
     else:
         return classify (row, node.false_branch)  
 
-#este código imprime el arbol.
-def printTree(node, spacing=""):
-
-    if isinstance(node, Leaf):
-        print (spacing + "Predict", node.predictions)
-        return
-
-    print (spacing + str(node.question))
-
-    print (spacing + '--> True:')
-    printTree(node.true_branch, spacing + "  ")
-
-    print (spacing + '--> False:')
-    printTree(node.false_branch, spacing + "  ")
-    
-
-#Esto ya es para correr el código e idealmente imprimirlo
-#Falta hacer que funcione :)
-    
-"aquí se lee el archivo"
-
+"LECTURA DE ARCHIVO"
 archivo = os.path.expanduser('~/Desktop/Datos proyecto/lite.csv')  
-data = createMatrix(archivo)
 #cProfile.run()
-question = Question(1,"no")
-true,false = partition(data,question)
-print(gini(true))
+data,numFilas =lecturaDeDatos(archivo)
+
+"CONSTRUIR EL ARBOL"
+#question = Question(1,"NO")
+#a,b = partition (data,question)
+labels = getLabels(data)
+a = buildTree(data)
