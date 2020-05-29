@@ -148,8 +148,6 @@ def decidePartition (rows, labels, questionsused):
     numFeatures = len(labels) -1 # number of labels
     for i in range (1, numFeatures):
         values = set ([row [i] for row in rows])
-        for k rows [i]:
-            
         
         for j in values:
             question = Question ( i, j)
@@ -170,7 +168,7 @@ def decidePartition (rows, labels, questionsused):
 class Tree:
     """An object type which splits the dataset and builds a tree
     """
-    def __init__(self, rows, labels, questionsused, limite = 5):
+    def __init__(self, rows, labels, questionsused, limite = 7):
         self.labels = labels
         self.questionsused = questionsused
         self.gain, self.question, self.questionsused = decidePartition(rows, labels, self.questionsused)
