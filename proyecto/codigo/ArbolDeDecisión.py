@@ -11,8 +11,7 @@ https://github.com/random-forests/tutorials/blob/master/decision_tree.py
 """
 import csv
 import os
-#import numpy as np
-import cProfile
+#import cProfile
 
 filas = 135001
 
@@ -20,6 +19,7 @@ filas = 135001
 
 def lecturaDeDatos (archivo):
     """Reads and stores the given dataset into a matrix
+    Input : the csv file containing the data.
     """
     with open(archivo, encoding = 'utf-8') as archivocsv: #encoding es para que reconozca cualquier caracter
         data = [0]* filas
@@ -28,8 +28,6 @@ def lecturaDeDatos (archivo):
         for line in lines:
             data[filasusadas] = line
             filasusadas = filasusadas+1
-            if filasusadas == 1000:
-                break
         filasusadas -= 1
         datos = [0]*filasusadas
         labels = data[0]
@@ -41,6 +39,9 @@ def lecturaDeDatos (archivo):
 "METODOS AUXILIARES"
 
 def is_number(s):
+    """ Determines wether a given value is numeric.
+    Input : a value
+    """
     try:
         float(s)
         return True
@@ -58,6 +59,7 @@ def is_number(s):
 
 def classCounts(rows):
     """ Counts how many success cases there are and stores it into a dictionary
+    Input : the dataset organized into a matrix
     """
     dictionary = {}  # {} crea un diccionario
     for row in rows:
@@ -67,20 +69,40 @@ def classCounts(rows):
         dictionary[dato] += 1
     return dictionary
 
-def mejorValue (rows, columna):
+def mejorValue (rows, columnNum):
+    """ Counts how many success cases there are and stores it into a dictionary
+    Input : the dataset organized into a matrix and the column number.
+    """
     dictionary = {}
-    return dictionary
+    for row in rows:
+        dato = row[columnNum]
+        if dato not in dictionary:
+            dictionary [dato] = 0
+        dictionary [dato] += int(row[-1])
+    
+    mejorValue = None
+    mejorExito = 0
+    for data in dictionary:
+        if (dictionary[data] >= mejorExito):
+            mejorExito = dictionary[data]
+            mejorValue = data
+        
+    return mejorValue
     
 "METODOS DE DECISIÓN"
     
 class Question:
     """ An object type which contains the questions or labels and the given answers without repetition. Ignores caps.
+    Input : the column number and a value that column may take
     """
     def __init__ (self, column, value):
         self.column = column
         self.value = value
         
     def match (self, data):
+        """ Determines wether to treat a value as a number (>=) or as a string (==) and says wether the value in the question meets that parameter.
+        Input : 
+        """
         a = data[self.column]
         if isinstance(a, int) or isinstance(a, float) or is_number(a):
             return a >= self.value
@@ -90,6 +112,8 @@ class Question:
 #Este metodo es importante para imprimir el arbol, hay que buscar que genere el string necesario  
 #"Welcome" -> "To"        
     def toString (self):
+        """ Organizes the Question data into a string.
+        """
         parameter = str(self.column)
         values = self.value
         comparison = " == "
@@ -102,6 +126,7 @@ class Question:
 
 def partition(rows,question):
     """Splits the matrix according to a given question, into a true matrix and a false matrix.
+    Input : the dataset organized into a matrix, a value of type Question
     """
     numtruerows = 0
     for row in rows:
@@ -123,6 +148,7 @@ def partition(rows,question):
        
 def gini (rows):
     """Calculates the gini impurity of a given dataset.
+    Input : the dataset organized into a matrix
     """
     counts = classCounts(rows)
     impurity = 1
@@ -133,6 +159,7 @@ def gini (rows):
 
 def informationGain (left, right, current_uncertainty):
     """Calculates the information gain of a given question.
+    Input: the data separated into two matrixes: left (true) and right (false), and the gini index of the node.
     """
     a = float(len(left))/(len(left)+len(right))
     b = current_uncertainty - a * gini(left) - (1 - a) * gini(right)
@@ -141,24 +168,23 @@ def informationGain (left, right, current_uncertainty):
 
 def decidePartition (rows, labels, questionsused):
     """Tests all the possible partition by all the possible questions and decides which has more information gain.
+    Input : the dataset organized into a matrix, an array containing the data labels or column headers and an array of the questions previously used.
     """
     bestgain = 0
     bestquestion = None
     currentUncertainty = gini(rows)
     numFeatures = len(labels) -1 # number of labels
-    for i in range (1, numFeatures):
-        values = set ([row [i] for row in rows])
-        
-        for j in values:
-            question = Question ( i, j)
-            if question in questionsused:
-                continue
-            truerows, falserows = partition(rows, question)
-            
-            gain = informationGain(truerows, falserows, currentUncertainty)
-            if gain >= bestgain: 
-                bestgain = gain
-                bestquestion = question
+    
+    for i in range(1, numFeatures):
+        value = mejorValue(rows, i)
+        question = Question (i, value)
+        if question in questionsused:
+            continue
+        truerows, falserows = partition(rows, question)
+        gain = informationGain(truerows, falserows, currentUncertainty)
+        if gain >= bestgain: 
+            bestgain = gain
+            bestquestion = question
     if bestquestion!= None:
         questionsused.append(bestquestion)    
     return bestgain, bestquestion, questionsused
@@ -168,7 +194,7 @@ def decidePartition (rows, labels, questionsused):
 class Tree:
     """An object type which splits the dataset and builds a tree
     """
-    def __init__(self, rows, labels, questionsused, limite = 7):
+    def __init__(self, rows, labels, questionsused, limite = 5):
         self.labels = labels
         self.questionsused = questionsused
         self.gain, self.question, self.questionsused = decidePartition(rows, labels, self.questionsused)
@@ -205,7 +231,7 @@ class Tree:
 #        return classify (row, node.false_branch)  
 
 "LECTURA DE ARCHIVO"
-archivo = os.path.expanduser('~/Desktop/Datos proyecto/datosprueba.csv')  
+archivo = os.path.expanduser('~/Desktop/Datos proyecto/datos0.csv')  
 #cProfile.run()
 data,numFilas,labels =lecturaDeDatos(archivo)
 "CONSTRUIR EL ARBOL"
