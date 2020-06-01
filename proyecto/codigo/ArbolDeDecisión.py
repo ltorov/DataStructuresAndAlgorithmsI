@@ -29,6 +29,8 @@ def lecturaDeDatos (archivo):
         for line in lines:
             data[filasusadas] = line
             filasusadas = filasusadas+1
+            if filasusadas == 5000:
+                break
         filasusadas -= 1
         datos = [0]*filasusadas
         labels = data[0]
@@ -231,6 +233,7 @@ class Tree:
         parameter, comparison, values = self.question.toString()
         parameterString = self.labels[int(parameter)]
         hijos = [self.hijoTrue, self.hijoFalse]
+        color = "[color=salmon2]"
         for hijo in hijos:
             if (hijo != None):
                 parameterHijo, comparisonHijo, valuesHijo = hijo.question.toString()
@@ -242,8 +245,17 @@ class Tree:
                 string = "\"" + parameterString + comparison + values + "\"" +  " -> " + "\"" + parameterHijoString + comparisonHijo + valuesHijo + "\"" + rama
                 print(string)
         if self.hijoTrue == None or self.hijoFalse == None:
-            string = "\"" + parameterString + comparison + values + "\"" + " -> " + "\"" + " Gini: " + str(round(gini(self.rows), 2)) + ", Probability of success : " + str(round(self.prediction, 2)) + "%" +  "\""
+            if self.prediction >= 50:
+                color = "[color=darkorange1]"
+            if self.prediction >= 70: 
+                color = "[color=greenyellow]"
+            if self.prediction >= 90:
+                color = "[color=\"0.650 0.200 1.000\"]"
+            
+            string = "\"" + parameterString + comparison + values + "\"" + " -> " + "\"" + " Gini: " + str(round(gini(self.rows), 2)) + ", Probability of success : " + str(round(self.prediction, 2)) + "%" +  "\"" 
+            colorString = "\"" + " Gini: " + str(round(gini(self.rows), 2)) + ", Probability of success : " + str(round(self.prediction, 2)) + "%" +  "\"" + color
             print (string)
+            print(colorString)
 
 def prediction(rows):
     """A nicer way to print the predictions at a leaf."""
@@ -285,6 +297,12 @@ data,numFilas,labels = lecturaDeDatos(archivoTrain)
 "CONSTRUIR EL ARBOL"
 
 questionsused = []
+print("ratio = fill;")
+print ("node [style=filled];")
+print("\"Probability < 50% \" [color=salmon2]")
+print("\"Probability >= 50 % \" [color=darkorange1]")
+print ("\"Probability >= 70% \" [color=greenyellow]")
+print ("\"Probability >= 90% \" [color=\"0.650 0.200 1.000\"]")
 tree = Tree(data, labels, questionsused)
 #cProfile.run('lecturaDeDatos(archivoTrain)')
 #cProfile.run('Tree(data, labels, questionsused)')
