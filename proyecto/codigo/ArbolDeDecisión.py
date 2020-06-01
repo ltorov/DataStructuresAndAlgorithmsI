@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -11,7 +12,7 @@ https://github.com/random-forests/tutorials/blob/master/decision_tree.py
 """
 import csv
 import os
-#import cProfile
+import cProfile
 
 filas = 135001
 
@@ -68,6 +69,20 @@ def classCounts(rows):
             dictionary[dato] = 0
         dictionary[dato] += 1
     return dictionary
+
+def countSuccess (rows):
+    dictionary = {}  # {} crea un diccionario
+    for row in rows:
+        dato = row[-1]   #row[-1] es el ultimo objeto de cada fila y es de tipo string.
+        if dato not in dictionary:  #aqui crea nuevas llaves
+            dictionary[dato] = 0
+        dictionary[dato] += 1
+    success = 0
+    for data in dictionary:
+        if (int(data) == 1):
+            success = int(dictionary[data])
+            
+    return success
 
 def mejorValue (rows, columnNum):
     """ Counts how many success cases there are and stores it into a dictionary
@@ -194,19 +209,23 @@ def decidePartition (rows, labels, questionsused):
 class Tree:
     """An object type which splits the dataset and builds a tree
     """
-    def __init__(self, rows, labels, questionsused, limite = 5):
+    def __init__(self, rows, labels, questionsused, limite = 7):
         self.labels = labels
         self.questionsused = questionsused
+        self.limite = limite
         self.gain, self.question, self.questionsused = decidePartition(rows, labels, self.questionsused)
-        if self.gain == 0 or limite == 0:
+        if self.gain == 0 or self.limite == 0:
             self.rows = rows
             self.hijoTrue = None
             self.hijoFalse = None
+            self.prediction = round(prediction(rows),4)*100
+            self.miString = Tree.generateString(self)
         else:     
             true_rows, false_rows = partition(rows, self.question)
             self.hijoTrue = Tree(true_rows, self.labels, questionsused, limite-1)
             self.hijoFalse = Tree(false_rows, self.labels, questionsused, limite-1)
             self.miString = Tree.generateString(self)
+            self.prediction = 0
             
     def generateString(self):
         parameter, comparison, values = self.question.toString()
@@ -216,25 +235,57 @@ class Tree:
             if (hijo != None):
                 parameterHijo, comparisonHijo, valuesHijo = hijo.question.toString()
                 parameterHijoString = self.labels[int(parameterHijo)]
-                string = " \" " + parameterString + comparison + values + " \" " +  " -> " + " \" " + parameterHijoString + comparisonHijo + valuesHijo + " \" "
+                if (hijo == self.hijoTrue):
+                    rama = "[ label = \"True\" ]"
+                else:
+                    rama = "[ label = \"False\" ]"
+                string = "\"" + parameterString + comparison + values + "\"" +  " -> " + "\"" + parameterHijoString + comparisonHijo + valuesHijo + "\"" + rama
                 print(string)
-    
+        if self.hijoTrue == None or self.hijoFalse == None:
+            string = "\"" + parameterString + comparison + values + "\"" + " -> " + "\"" + " Gini: " + str(round(gini(self.rows), 2)) + ", Probability of success : " + str(round(self.prediction, 2)) + "%" +  "\""
+            print (string)
+
+def prediction(rows):
+    """A nicer way to print the predictions at a leaf."""
+    dictionary = classCounts(rows)
+    if '1' in dictionary:
+        sucess = dictionary ['1']
+    else:
+        sucess = 0
+    if '0' in dictionary:
+        fail = dictionary ['0']
+    else:
+        fail = 0
+    total = sucess + fail
+    prediction = sucess/ total
+    return prediction
         
-#def classify(row, node):
-#    """Uses the decision tree to test new data.
-#    """
-#    if isinstance(node,Leaf):
-#        return node.predictions
-#    if node.question.match(row):
-#        return classify (row, node.true_branch)
-#    else:
-#        return classify (row, node.false_branch)  
+def classify(tree, row):
+    """Uses the decision tree to test new data.
+    """
+    if tree.gain == 0 or tree.limite == 0:
+        print(tree.prediction)
+        if tree.prediction >= 50:
+            return round (tree.prediction, 2), "Successfull"
+        else:
+            return round(tree.prediction, 2), "Unsuccessfull"
+        
+    if row[tree.question.column] == tree.question.value:
+        return classify (tree.hijoTrue, row)
+    else:
+        return classify (tree.hijoFalse, row)
+                
 
 "LECTURA DE ARCHIVO"
-archivo = os.path.expanduser('~/Desktop/Datos proyecto/datos0.csv')  
-#cProfile.run()
-data,numFilas,labels =lecturaDeDatos(archivo)
+archivoTrain = os.path.expanduser('datos5.csv')  
+archivoTest = os.path.expanduser('datos0.csv')
+
+data,numFilas,labels = lecturaDeDatos(archivoTrain)
+#dataTest, numFilasTest, labelsTest = lecturaDeDatos(archivoTest)
 "CONSTRUIR EL ARBOL"
 
 questionsused = []
 tree = Tree(data, labels, questionsused)
+#cProfile.run('lecturaDeDatos(archivoTrain)')
+#cProfile.run('Tree(data, labels, questionsused)')
+
