@@ -13,7 +13,7 @@ import os
 import cProfile
 
 "READING AND STORING DATASET"
-
+#O(n)
 def importData (archivo):
     """Reads and stores the given dataset into a matrix
     Input : the csv file containing the data.
@@ -25,6 +25,8 @@ def importData (archivo):
         for line in lines:
             data[filasusadas] = line
             filasusadas = filasusadas+1
+            if filasusadas == 1000:
+                break
         filasusadas -= 1
         datos = [0]*filasusadas
         labels = data[0]
@@ -33,7 +35,7 @@ def importData (archivo):
         return datos, filasusadas, labels
     
 "AUXILIARY METHODS"
-#
+#O(1)
 def is_number(value):
     """ Determines wether a given value is numeric.
     Input : a value
@@ -154,7 +156,7 @@ def partition(rows, question):
             false_rows[k] = row #inputs the rows that apply to the false matrix
             k=k+1
     return true_rows, false_rows  
-#O(n) or O(2) = O(1)      
+#O(1)      
 def gini (rows):
     """Calculates the gini impurity of a given dataset.
     Input : the dataset organized into a matrix
@@ -165,7 +167,7 @@ def gini (rows):
         prob = counts[i]/ float(len(rows))
         impurity -= prob**2 # ** is for exponents.
     return impurity
-#O(n)
+#O(1)
 def informationGain (left, right, current_uncertainty):
     """Calculates the information gain of a given question.
     Input: the data separated into two matrixes: left (true) and right (false), and the gini index of the node.
@@ -202,7 +204,8 @@ def decidePartition (rows, labels, questionsused):
 class Tree:
     """An object type which splits the dataset and builds a tree
     """
-    def __init__(self, rows, labels, questionsused, limit = 8):
+    #O(2^n)
+    def __init__(self, rows, labels, questionsused, limit = 3):
         """ A recursive method that creates the tree by creating nodes and leafs, conected throught "children".
         Input : the dataset organized into a matrix, the column headers or labels, an array of the questions that have been used in a branch and the recursion depth.
         """
@@ -222,7 +225,7 @@ class Tree:
             self.falseSon = Tree(false_rows, self.labels, questionsused, limit-1) #the false child, or child that doesn't abide the condition
             self.myString = Tree.generateString(self)  # creates a string to print the tree.
             self.prediction = 0
-            
+    #O(1)   
     def generateString(self):
         """ Organizes the tree into strings to print it and print the connection between nodes. Leaves are printed with their given gini index and probability of success. 
         According to the probability of success, the leaves are printed with a color scale.
@@ -254,7 +257,7 @@ class Tree:
             colorString = "\"" + " Gini: " + str(round(gini(self.rows), 2)) + ", Probability of success : " + str(round(self.prediction, 2)) + "%" +  "\"" + color
             #print (string)
             #print(colorString)
-#O()
+#O(n)
 def prediction(rows):
     """ Calculates the probability of success with three decimal points.
     Input : the dataset organized into a matrix
@@ -269,7 +272,7 @@ def prediction(rows):
     total = success + fail
     prediction = round((success / total),5) *100 #determines decimal points.
     return prediction
-#O(n)       
+#O(m)       
 def classify(tree, row):
     """A recursive method that uses the decision tree to test each person
     Input : the tree build with the training data and the dataset to be tested organized into a matrix.
@@ -286,8 +289,8 @@ def classify(tree, row):
     if tree.question.match(row): #if its a decision node, then determine wether the row or student meets the condition of the question.
         return classify (tree.trueSon, row) #recursion if the row meets the condition
     else:
-        return classify (tree.falseSon, row) # recursion if the row doesn't meet the condition
-#O (n^2) oO(n*m)
+        return classify (tree.falseSon, row) #recursion if the row doesn't meet the condition
+#O(n*m)
 def runClassify(tree, dataTest):
     """Loops through all the test dataset and calculates the probabilty of success.
     Input : the tree built with the training data and the dataset to be tested.
@@ -313,21 +316,21 @@ dataTest, numFilasTest, labelsTest = importData(archivoTest)
 "BUILD TREE"
 
 questionsused = []
-#print("ratio = fill;")
-#print ("node [style=filled];")
-#print("\"Probability < 50% \" [color=salmon2]")
-#print("\"Probability >= 50 % \" [color=darkorange1]")
-#print ("\"Probability >= 70% \" [color=greenyellow]")
-#print ("\"Probability >= 90% \" [color=\"0.650 0.200 1.000\"]")
+print("ratio = fill;")
+print ("node [style=filled];")
+print("\"Probability < 50% \" [color=salmon2]")
+print("\"Probability >= 50 % \" [color=darkorange1]")
+print ("\"Probability >= 70% \" [color=greenyellow]")
+print ("\"Probability >= 90% \" [color=\"0.650 0.200 1.000\"]")
 
-tree = Tree(data, labels, questionsused)
+#tree = Tree(data, labels, questionsused)
 
 "CLASSIFY NEW DATA"
 
-print(runClassify(tree, dataTest))
+#runClassify(tree, dataTest)
 
 "TESTING TIME"
 
 cProfile.run('importData(archivoTrain)')
-cProfile.run('Tree(data, labels, questionsused)')
-cProfile.run('runClassify(tree,dataTest)')  
+#cProfile.run('Tree(data, labels, questionsused)')
+#cProfile.run('runClassify(tree,dataTest)')  
